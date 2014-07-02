@@ -1,0 +1,108 @@
+#!/bin/bash
+
+CURRENT_PATH=${PWD}
+RESOURCES=$CURRENT_PATH/resources
+
+MYSQL_DB='scm'
+MYSQL_USER='root'
+MYSQL_PASSWORD='root'
+#APP = 'scm_0.1.0.tar.gz'
+
+#yum
+sed -i '1s/#!\/usr\/bin\/python$/#!\/usr\/bin\/python2.4/' /usr/bin/yum
+
+/etc/init.d/iptables stop 
+
+# Install nginx
+cp $RESOURCES/nginx/nginx.repo /etc/yum.repos.d/
+yum -y install nginx
+
+# Update nginx config
+mv /etc/nginx/nginx.conf  /etc/nginx/nginx.conf.bak
+cp $RESOURCES/nginx/nginx.conf /etc/nginx/
+-------------------------------------------------------
+# Install mysql
+yum -y install mysql-server mysql-devel
+
+# Start mysqld
+/etc/init.d/mysqld start
+
+# Mysql initialization
+mysql -uroot -e"drop database $MYSQL_DB"
+mysql -uroot -e"create database $MYSQL_DB default charset utf8"
+mysql -uroot -e"create user $MYSQL_USER@'localhost' identified by '$MYSQL_PASSWORD'"
+mysql -uroot -e"grant all privileges on $MYSQL_DB.* to $MYSQL_USER@'localhost'"
+
+# Install Python2.6.6
+yum -y install gcc python-devel
+
+cd $RESOURCES/python
+tar zxvf Python-2.7.3.tgz
+cd  Python-2.7.3
+./configure 
+make -j2
+make install
+
+ln -sf /usr/local/bin/python2.7 /usr/bin/python
+
+# Install pip
+
+cd $RESOURCES/python
+tar -zxvf setuptools-0.6c11.tar.gz
+cd setuptools-0.6c11/
+python setup.py install
+
+
+
+easy_install pip
+pip install mysql-python
+
+
+#非bundle安装
+#Install Django
+#pip install django==1.2.3
+
+#Install Mysql-python
+#cd $RESOURCES/
+#tar zxvf MySQL-python-1.2.2.tar.gz
+#cd MySQL-python-1.2.2
+#python setup.py install 
+#非bundle安装结束
+
+#bundle安装
+#cd $RESOURCES/python
+#pip install scm.pybundle
+#bundle安装结束
+
+
+# Install SCM
+#cd $RESOURCES/django
+#tar zxvf $APP
+#cp -r scm /var/www
+#cd /var/www/scm/requirements
+#pip install -r prod.txt
+
+# Install uwsgi
+yum -y install libxml2-devel
+
+pip install uwsgi
+
+#cd $RESOURCES/uwsgi
+#tar zxvf uwsgi-1.0.1.tar.gz
+#cd  uwsgi-1.0.1
+#make -f Makefile.Py26
+#cp uwsgi /usr/bin/
+
+cp $RESOURCES/uwsgi/django_uwsgi.py /var/www/
+cp $RESOURCES/uwsgi/uwsgi.xml /var/www/
+cp $RESOURCES/uwsgi/uwsgiserver /etc/init.d/
+
+
+#cd /var/www/scm/
+#python manage.py syncdb
+
+# Reload nginx config
+#/etc/init.d/nginx restart
+#/etc/init.d/uwsgiserver restart
+
+
